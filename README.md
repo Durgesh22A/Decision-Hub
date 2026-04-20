@@ -1,16 +1,57 @@
-# React + Vite
+# 🚀 DecisionHub
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A smart decision-making web application that helps users choose the best option using a weighted scoring system.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🎯 Problem Statement
 
-## React Compiler
+Making decisions involving multiple factors (price, performance, features, etc.) can be confusing and biased.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+DecisionHub solves this by:
+- Structuring decision criteria
+- Assigning weights to importance
+- Scoring options objectively
+- Generating a ranked result
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 🧠 Core Idea
+
+Each option is evaluated using:
+
+Final Score = Σ (Criteria Weight × Score)
+
+This ensures:
+- Transparent decision-making
+- Logical comparison
+- Data-driven outcomes
+
+---
+
+## ✨ Features
+
+- 🔐 User Authentication (Firebase)
+- 📊 Create and manage decisions
+- ⚖️ Add criteria with weights (total = 100)
+- 📝 Add multiple options
+- 🔢 Assign scores (1–10 scale)
+- 🏆 Automatic ranking of options
+- 📈 Score breakdown for transparency
+- 👤 User profile (name update)
+
+---
+
+## 🛠 Tech Stack
+
+- **Frontend:** React (Vite)
+- **Styling:** CSS / Tailwind (if applied)
+- **Backend:** Firebase
+  - Authentication
+  - Firestore Database
+- **Routing:** React Router
+- **State Management:** Context API + Hooks
+
+---
+
+## 📂 Project Structure
