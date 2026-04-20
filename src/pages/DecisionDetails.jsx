@@ -5,6 +5,7 @@ import Navbar from "../components/Navbar";
 import OptionForm from "../components/OptionForm";
 import ResultsSection from "../components/ResultsSection";
 import ScoreMatrix from "../components/ScoreMatrix";
+import ConfirmModal from "../components/ConfirmModal";
 import useDecisionRanking from "../hooks/useDecisionRanking";
 import {
   addCriterion,
@@ -20,6 +21,7 @@ import {
 
 export default function DecisionDetails() {
   const { id } = useParams();
+
   const [decision, setDecision] = useState(null);
   const [criteria, setCriteria] = useState([]);
   const [options, setOptions] = useState([]);
@@ -28,22 +30,52 @@ export default function DecisionDetails() {
   const [feedback, setFeedback] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
+  const [showModal, setShowModal] = useState(false);
+  const [deleteType, setDeleteType] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
+
   const totalWeight = useMemo(
-    () => criteria.reduce((sum, criterion) => sum + Number(criterion.weight || 0), 0),
+    () =>
+      criteria.reduce(
+        (sum, criterion) => sum + Number(criterion.weight || 0),
+        0,
+      ),
     [criteria],
   );
+
   const requiredScoreCount = options.length * criteria.length;
+
   const hasCompleteSavedScores = useMemo(() => {
-    if (!requiredScoreCount) {
-      return false;
-    }
+    if (!requiredScoreCount) return false;
     const validScores = savedScores.filter((score) => {
       const value = Number(score.value);
       return Number.isFinite(value) && value >= 1 && value <= 10;
     });
     return validScores.length >= requiredScoreCount;
   }, [savedScores, requiredScoreCount]);
+
   const rankedOptions = useDecisionRanking(options, criteria, savedScores);
+
+  const insights = useMemo(() => {
+    if (!rankedOptions.length || !criteria.length) return [];
+
+    const best = rankedOptions[0];
+    const messages = [];
+
+    criteria.forEach((c) => {
+      const scoreObj = savedScores.find(
+        (s) => s.optionId === best.id && s.criteriaId === c.id,
+      );
+
+      const value = Number(scoreObj?.value || 0);
+
+      if (value >= 8) {
+        messages.push(`${c.name} is strong (${value}/10)`);
+      }
+    });
+
+    return messages;
+  }, [rankedOptions, criteria, savedScores]);
 
   const applyLoadedData = useCallback(
     ({ decisionData, criteriaData, optionsData, scoresData }) => {
@@ -56,10 +88,13 @@ export default function DecisionDetails() {
       optionsData.forEach((option) => {
         criteriaData.forEach((criterion) => {
           const score = scoresData.find(
-            (item) => item.optionId === option.id && item.criteriaId === criterion.id,
+            (item) =>
+              item.optionId === option.id && item.criteriaId === criterion.id,
           );
           if (score) {
-            nextDraftScores[`${option.id}_${criterion.id}`] = Number(score.value);
+            nextDraftScores[`${option.id}_${criterion.id}`] = Number(
+              score.value,
+            );
           }
         });
       });
@@ -69,36 +104,33 @@ export default function DecisionDetails() {
   );
 
   const loadAll = useCallback(async () => {
-    const [decisionData, criteriaData, optionsData, scoresData] = await Promise.all([
-      getDecisionById(id),
-      getCriteria(id),
-      getOptions(id),
-      getDecisionScores(id),
-    ]);
+    const [decisionData, criteriaData, optionsData, scoresData] =
+      await Promise.all([
+        getDecisionById(id),
+        getCriteria(id),
+        getOptions(id),
+        getDecisionScores(id),
+      ]);
     return { decisionData, criteriaData, optionsData, scoresData };
   }, [id]);
 
   useEffect(() => {
     let isActive = true;
+
     loadAll()
-      .then(({ decisionData, criteriaData, optionsData, scoresData }) => {
-        if (!isActive) {
-          return;
-        }
-        applyLoadedData({ decisionData, criteriaData, optionsData, scoresData });
+      .then((data) => {
+        if (!isActive) return;
+        applyLoadedData(data);
       })
       .catch(() => {
-        if (!isActive) {
-          return;
-        }
-        setFeedback("Unable to load decision data. Please refresh.");
+        if (!isActive) return;
+        setFeedback("Unable to load decision data.");
       })
       .finally(() => {
-        if (!isActive) {
-          return;
-        }
+        if (!isActive) return;
         setIsLoading(false);
       });
+
     return () => {
       isActive = false;
     };
@@ -107,54 +139,53 @@ export default function DecisionDetails() {
   const handleAddCriteria = async ({ name, weight }) => {
     try {
       await addCriterion({ decisionId: id, name, weight });
-      const { decisionData, criteriaData, optionsData, scoresData } = await loadAll();
-      applyLoadedData({ decisionData, criteriaData, optionsData, scoresData });
+      const data = await loadAll();
+      applyLoadedData(data);
     } catch {
-      setFeedback("Could not add criteria. Please try again.");
+      setFeedback("Could not add criteria.");
     }
   };
 
   const handleAddOption = async (name) => {
     try {
       await addOption({ decisionId: id, name });
-      const { decisionData, criteriaData, optionsData, scoresData } = await loadAll();
-      applyLoadedData({ decisionData, criteriaData, optionsData, scoresData });
+      const data = await loadAll();
+      applyLoadedData(data);
     } catch {
-      setFeedback("Could not add option. Please try again.");
+      setFeedback("Could not add option.");
     }
   };
 
-  const handleDeleteCriterion = async (criterionId) => {
-    const confirmed = window.confirm(
-      "Delete this criterion and its related scores?",
-    );
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      await deleteCriterion({ decisionId: id, criterionId });
-      const { decisionData, criteriaData, optionsData, scoresData } = await loadAll();
-      applyLoadedData({ decisionData, criteriaData, optionsData, scoresData });
-      setFeedback("Criterion removed.");
-    } catch {
-      setFeedback("Could not delete criterion. Please try again.");
-    }
+  const handleDeleteCriterion = (criterionId) => {
+    setDeleteType("criteria");
+    setSelectedId(criterionId);
+    setShowModal(true);
   };
 
-  const handleDeleteOption = async (optionId) => {
-    const confirmed = window.confirm("Delete this option and its related scores?");
-    if (!confirmed) {
-      return;
-    }
+  const handleDeleteOption = (optionId) => {
+    setDeleteType("option");
+    setSelectedId(optionId);
+    setShowModal(true);
+  };
 
+  const confirmDelete = async () => {
     try {
-      await deleteOption({ decisionId: id, optionId });
-      const { decisionData, criteriaData, optionsData, scoresData } = await loadAll();
-      applyLoadedData({ decisionData, criteriaData, optionsData, scoresData });
-      setFeedback("Option removed.");
+      if (deleteType === "criteria") {
+        await deleteCriterion({ decisionId: id, criterionId: selectedId });
+      }
+
+      if (deleteType === "option") {
+        await deleteOption({ decisionId: id, optionId: selectedId });
+      }
+
+      const data = await loadAll();
+      applyLoadedData(data);
     } catch {
-      setFeedback("Could not delete option. Please try again.");
+      setFeedback("Delete failed.");
+    } finally {
+      setShowModal(false);
+      setSelectedId(null);
+      setDeleteType(null);
     }
   };
 
@@ -170,101 +201,76 @@ export default function DecisionDetails() {
   };
 
   const handleSaveScores = async () => {
-    setFeedback("");
     if (totalWeight !== 100) {
-      setFeedback("Total criteria weight must be exactly 100 before saving scores.");
+      setFeedback("Total weight must be 100.");
       return;
     }
 
     const scoreEntries = [];
+
     for (const option of options) {
       for (const criterion of criteria) {
         const key = `${option.id}_${criterion.id}`;
         const value = Number(draftScores[key]);
-        if (!Number.isFinite(value) || value < 1 || value > 10) {
-          setFeedback("Every score must be set between 1 and 10.");
+
+        if (!value) {
+          setFeedback("Fill all scores.");
           return;
         }
-        scoreEntries.push({ optionId: option.id, criteriaId: criterion.id, value });
+
+        scoreEntries.push({
+          optionId: option.id,
+          criteriaId: criterion.id,
+          value,
+        });
       }
     }
 
     try {
       await saveDecisionScores({ decisionId: id, scoreEntries });
-      setFeedback("Scores saved successfully.");
-      const { decisionData, criteriaData, optionsData, scoresData } = await loadAll();
-      applyLoadedData({ decisionData, criteriaData, optionsData, scoresData });
+      const data = await loadAll();
+      applyLoadedData(data);
+      setFeedback("Saved!");
     } catch {
-      setFeedback("Could not save scores. Please try again.");
+      setFeedback("Save failed.");
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 bg-gradient-to-br from-slate-100 via-indigo-50/40 to-emerald-50/40">
+    <div className="min-h-screen bg-slate-100">
       <Navbar />
-      <main className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8">
-        <section className="animate-fade-up rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition duration-300 hover:shadow-lg">
-          <h1 className="text-2xl font-bold text-slate-900">
-            {isLoading ? "Loading decision..." : decision?.title || "Decision details"}
-          </h1>
-          <p className="mt-1 text-sm text-slate-600">
-            Define your criteria, score each option, and compare outcomes transparently.
-          </p>
-          <p
-            className={`mt-4 inline-block rounded-md px-3 py-1 text-sm font-medium ${
-              totalWeight === 100 ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
-            }`}
-          >
-            Total Weight: {totalWeight} / 100
-          </p>
+
+      <main className="mx-auto max-w-6xl space-y-6 p-6">
+        <section className="bg-white p-6 rounded-xl shadow">
+          <h1 className="text-xl font-bold">{decision?.title || "Decision"}</h1>
+          <p>Total Weight: {totalWeight}/100</p>
         </section>
 
-        <section className="animate-fade-up grid gap-6 lg:grid-cols-2">
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition duration-300 hover:shadow-lg">
+        <section className="grid md:grid-cols-2 gap-4">
+          <div className="bg-white p-4 rounded-xl">
             <CriteriaForm onSubmit={handleAddCriteria} />
-            <div className="mt-4 space-y-2">
-              {criteria.map((criterion) => (
-                <div
-                  key={criterion.id}
-                  className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-100"
-                >
-                  <p>
-                    {criterion.name} ({criterion.weight}%)
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteCriterion(criterion.id)}
-                    className="rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs font-medium text-red-700 transition hover:bg-red-100"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-            </div>
+            {criteria.map((c) => (
+              <div key={c.id} className="flex justify-between">
+                <span>{c.name}</span>
+                <button onClick={() => handleDeleteCriterion(c.id)}>
+                  Remove
+                </button>
+              </div>
+            ))}
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition duration-300 hover:shadow-lg">
+
+          <div className="bg-white p-4 rounded-xl">
             <OptionForm onSubmit={handleAddOption} />
-            <div className="mt-4 space-y-2">
-              {options.map((option) => (
-                <div
-                  key={option.id}
-                  className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-100"
-                >
-                  <p>{option.name}</p>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteOption(option.id)}
-                    className="rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs font-medium text-red-700 transition hover:bg-red-100"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-            </div>
+            {options.map((o) => (
+              <div key={o.id} className="flex justify-between">
+                <span>{o.name}</span>
+                <button onClick={() => handleDeleteOption(o.id)}>Remove</button>
+              </div>
+            ))}
           </div>
         </section>
 
-        <section className="animate-fade-up rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition duration-300 hover:shadow-lg">
+        <section className="bg-white p-6 rounded-xl">
           <ScoreMatrix
             options={options}
             criteria={criteria}
@@ -272,16 +278,33 @@ export default function DecisionDetails() {
             onScoreChange={handleScoreChange}
             onSave={handleSaveScores}
           />
-          {feedback && <p className="mt-3 text-sm text-indigo-700">{feedback}</p>}
         </section>
 
-        <section className="animate-fade-up rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition duration-300 hover:shadow-lg">
+        <section className="bg-white p-6 rounded-xl">
           <ResultsSection
             rankedOptions={rankedOptions}
             hasCompleteSavedScores={hasCompleteSavedScores}
           />
+
+          {insights.length > 0 && (
+            <div className="mt-4 bg-green-50 p-3 rounded">
+              <p className="font-semibold">Why this is best:</p>
+              <ul className="list-disc ml-5">
+                {insights.map((i, idx) => (
+                  <li key={idx}>{i}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </section>
       </main>
+
+      <ConfirmModal
+        isOpen={showModal}
+        message="Delete this item?"
+        onConfirm={confirmDelete}
+        onCancel={() => setShowModal(false)}
+      />
     </div>
   );
 }

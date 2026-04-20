@@ -1,54 +1,71 @@
 # 🚀 DecisionHub
 
-A smart decision-making web application that helps users choose the best option using a weighted scoring system.
+A smart decision-making web application that helps users choose the best option using a structured, weighted scoring system.
 
 ---
 
 ## 🎯 Problem Statement
 
-Making decisions involving multiple factors (price, performance, features, etc.) can be confusing and biased.
+Real-life decisions often involve multiple factors like price, performance, features, and usability. Most people rely on intuition, which leads to biased or inconsistent outcomes.
 
-DecisionHub solves this by:
-
-- Structuring decision criteria
-- Assigning weights to importance
-- Scoring options objectively
-- Generating a ranked result
+DecisionHub solves this by transforming decision-making into a **structured, data-driven process**.
 
 ---
 
-## 🧠 Core Idea
+## 💡 Solution
+
+DecisionHub allows users to:
+
+- Define decision criteria
+- Assign importance using weights
+- Score each option objectively
+- Automatically compute and rank results
+
+---
+
+## 🧠 Core Concept
 
 Final Score = Σ (Criteria Weight × Score)
 
 This ensures:
 
-- Transparent decision-making
+- Transparent reasoning
 - Logical comparison
-- Data-driven outcomes
+- Consistent and unbiased decisions
 
 ---
 
-## ✨ Features
+## ✨ Key Features
 
-- 🔐 User Authentication (Firebase)
-- 📊 Create and manage decisions
-- ⚖️ Add criteria with weights (total = 100)
-- 📝 Add multiple options
-- 🔢 Assign scores (1–10 scale)
+- 🔐 Authentication (Firebase Auth)
+- 📊 Create and manage multiple decisions
+- ⚖️ Add criteria with weighted importance (must total 100)
+- 📝 Add multiple options to compare
+- 🔢 Assign scores (scale of 1–10)
 - 🏆 Automatic ranking of options
-- 📈 Score breakdown for transparency
-- 👤 User profile (name update)
+- 📈 Detailed score breakdown
+- 💡 Insight explanation (why the best option wins)
+- 👤 User profile management
 
 ---
 
-## 🛠 Tech Stack
+## 🧱 Tech Stack
 
 - Frontend: React (Vite)
-- Styling: CSS / Tailwind
+- Styling: Tailwind CSS
 - Backend: Firebase (Auth + Firestore)
 - Routing: React Router
 - State Management: Context API + Hooks
+
+---
+
+## 🏗 Architecture Highlights
+
+- Modular folder structure (components, pages, services, hooks)
+- Separation of concerns (UI, logic, data)
+- Reusable components
+- Custom hook for ranking logic
+- Clean global state using Context API
 
 ---
 
@@ -89,28 +106,31 @@ npm run dev
 
 ---
 
-## 📸 Demo Flow
+## 🎥 Demo Flow
 
 1. Login / Signup
 2. Create a new decision
 3. Add criteria (with weights)
 4. Add options
 5. Assign scores (1–10)
-6. View ranked results and best option
+6. View ranked results
+7. Understand why the best option was selected
 
 ---
 
 ## ⚠️ Assumptions
 
-- All criteria are treated as benefit-type (higher score = better)
+- All criteria are benefit-type (higher score = better)
 - Total weight must equal 100
+- Scores must be between 1–10
 
 ---
 
 ## 🚀 Future Improvements
 
-- Support for cost-based criteria (e.g., price)
+- Support cost-based criteria (e.g., price)
 - Charts / analytics
+- AI-powered insights
 - Collaboration features
 - Export results
 
@@ -122,7 +142,7 @@ Durgesh Kumar
 
 ---
 
-## 💡 Note
+## 📌 Note
 
 This project demonstrates:
 
