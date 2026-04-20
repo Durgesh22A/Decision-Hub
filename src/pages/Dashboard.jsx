@@ -91,20 +91,18 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 bg-gradient-to-br from-slate-100 via-indigo-50/40 to-cyan-50/40">
+    <div className="min-h-screen bg-slate-50">
       <Navbar />
 
-      <main className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8">
-        {/* CREATE SECTION */}
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h1 className="text-2xl font-bold text-slate-900">Your Decisions</h1>
-
-          <p className="mt-1 text-sm text-slate-600">
+      <main className="mx-auto w-full max-w-4xl space-y-4 px-4 py-8">
+        <section className="rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
+          <h1 className="text-xl font-bold text-slate-900">Your Decisions</h1>
+          <p className="mt-1 text-sm text-slate-500">
             Create and compare options with weighted scores.
           </p>
 
           <form
-            className="mt-5 flex flex-col gap-3 sm:flex-row"
+            className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center"
             onSubmit={handleCreateDecision}
           >
             <input
@@ -112,25 +110,26 @@ export default function Dashboard() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Choose a laptop"
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-300"
+              className="w-full flex-1 rounded-lg border border-slate-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
             />
 
             <button
               type="submit"
               disabled={isCreating}
-              className="rounded-lg bg-indigo-600 px-5 py-2 text-white hover:bg-indigo-500 transition disabled:opacity-60"
+              className="whitespace-nowrap rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-indigo-700 disabled:opacity-60"
             >
               {isCreating ? "Creating..." : "Create Decision"}
             </button>
           </form>
 
-          {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+          {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
         </section>
 
-        {/* LIST */}
         <section className="space-y-3">
           {isLoading ? (
-            <p className="animate-pulse text-slate-500">Loading decisions...</p>
+            <p className="animate-pulse text-center text-sm text-slate-400 py-8">
+              Loading decisions...
+            </p>
           ) : decisions.length ? (
             decisions.map((decision) => (
               <DecisionCard
@@ -141,10 +140,12 @@ export default function Dashboard() {
               />
             ))
           ) : (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center">
-              <div className="text-slate-500">
-                <p className="text-3xl">📭</p>
-                <p className="mt-2">No decisions yet. Create your first one.</p>
+            <div className="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center shadow-sm">
+              <div className="text-slate-400">
+                <p className="text-4xl">📭</p>
+                <p className="mt-3 text-sm font-medium text-slate-600">
+                  No decisions yet. Create your first one.
+                </p>
               </div>
             </div>
           )}
