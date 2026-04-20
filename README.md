@@ -18,8 +18,6 @@ DecisionHub solves this by:
 
 ## 🧠 Core Idea
 
-Each option is evaluated using:
-
 Final Score = Σ (Criteria Weight × Score)
 
 This ensures:
@@ -44,14 +42,88 @@ This ensures:
 
 ## 🛠 Tech Stack
 
-- **Frontend:** React (Vite)
-- **Styling:** CSS / Tailwind (if applied)
-- **Backend:** Firebase
-  - Authentication
-  - Firestore Database
-- **Routing:** React Router
-- **State Management:** Context API + Hooks
+- Frontend: React (Vite)
+- Styling: CSS / Tailwind
+- Backend: Firebase (Auth + Firestore)
+- Routing: React Router
+- State Management: Context API + Hooks
 
 ---
 
 ## 📂 Project Structure
+
+```
+src/
+  components/
+  pages/
+  context/
+  services/
+  hooks/
+```
+
+---
+
+## 🔐 Environment Variables
+
+Create a `.env` file in root:
+
+```
+VITE_FIREBASE_API_KEY=
+VITE_FIREBASE_AUTH_DOMAIN=
+VITE_FIREBASE_PROJECT_ID=
+VITE_FIREBASE_STORAGE_BUCKET=
+VITE_FIREBASE_MESSAGING_SENDER_ID=
+VITE_FIREBASE_APP_ID=
+```
+
+---
+
+## ⚙️ Setup Instructions
+
+```bash
+npm install
+npm run dev
+```
+
+---
+
+## 📸 Demo Flow
+
+1. Login / Signup  
+2. Create a new decision  
+3. Add criteria (with weights)  
+4. Add options  
+5. Assign scores (1–10)  
+6. View ranked results and best option  
+
+---
+
+## ⚠️ Assumptions
+
+- All criteria are treated as benefit-type (higher score = better)  
+- Total weight must equal 100  
+
+---
+
+## 🚀 Future Improvements
+
+- Support for cost-based criteria (e.g., price)  
+- Charts / analytics  
+- Collaboration features  
+- Export results  
+
+---
+
+## 👨‍💻 Author
+
+Durgesh Kumar
+
+---
+
+## 💡 Note
+
+This project demonstrates:
+- Strong React fundamentals  
+- Backend integration  
+- Clean architecture  
+- Real-world problem solving  
