@@ -35,11 +35,7 @@ export default function DecisionDetails() {
   const [selectedId, setSelectedId] = useState(null);
 
   const totalWeight = useMemo(
-    () =>
-      criteria.reduce(
-        (sum, criterion) => sum + Number(criterion.weight || 0),
-        0,
-      ),
+    () => criteria.reduce((sum, c) => sum + Number(c.weight || 0), 0),
     [criteria],
   );
 
@@ -47,11 +43,7 @@ export default function DecisionDetails() {
 
   const hasCompleteSavedScores = useMemo(() => {
     if (!requiredScoreCount) return false;
-    const validScores = savedScores.filter((score) => {
-      const value = Number(score.value);
-      return Number.isFinite(value) && value >= 1 && value <= 10;
-    });
-    return validScores.length >= requiredScoreCount;
+    return savedScores.length >= requiredScoreCount;
   }, [savedScores, requiredScoreCount]);
 
   const rankedOptions = useDecisionRanking(options, criteria, savedScores);
@@ -84,21 +76,18 @@ export default function DecisionDetails() {
       setOptions(optionsData);
       setSavedScores(scoresData);
 
-      const nextDraftScores = {};
-      optionsData.forEach((option) => {
-        criteriaData.forEach((criterion) => {
+      const next = {};
+      optionsData.forEach((o) => {
+        criteriaData.forEach((c) => {
           const score = scoresData.find(
-            (item) =>
-              item.optionId === option.id && item.criteriaId === criterion.id,
+            (s) => s.optionId === o.id && s.criteriaId === c.id,
           );
           if (score) {
-            nextDraftScores[`${option.id}_${criterion.id}`] = Number(
-              score.value,
-            );
+            next[`${o.id}_${c.id}`] = Number(score.value);
           }
         });
       });
-      setDraftScores(nextDraftScores);
+      setDraftScores(next);
     },
     [],
   );
@@ -115,162 +104,149 @@ export default function DecisionDetails() {
   }, [id]);
 
   useEffect(() => {
-    let isActive = true;
+    let active = true;
 
     loadAll()
       .then((data) => {
-        if (!isActive) return;
+        if (!active) return;
         applyLoadedData(data);
       })
-      .catch(() => {
-        if (!isActive) return;
-        setFeedback("Unable to load decision data.");
-      })
-      .finally(() => {
-        if (!isActive) return;
-        setIsLoading(false);
-      });
+      .finally(() => setIsLoading(false));
 
-    return () => {
-      isActive = false;
-    };
+    return () => (active = false);
   }, [loadAll, applyLoadedData]);
 
-  const handleAddCriteria = async ({ name, weight }) => {
-    try {
-      await addCriterion({ decisionId: id, name, weight });
-      const data = await loadAll();
-      applyLoadedData(data);
-    } catch {
-      setFeedback("Could not add criteria.");
-    }
+  const handleAddCriteria = async (data) => {
+    await addCriterion({ decisionId: id, ...data });
+    applyLoadedData(await loadAll());
   };
 
   const handleAddOption = async (name) => {
-    try {
-      await addOption({ decisionId: id, name });
-      const data = await loadAll();
-      applyLoadedData(data);
-    } catch {
-      setFeedback("Could not add option.");
-    }
+    await addOption({ decisionId: id, name });
+    applyLoadedData(await loadAll());
   };
 
-  const handleDeleteCriterion = (criterionId) => {
+  const handleDeleteCriterion = (id) => {
     setDeleteType("criteria");
-    setSelectedId(criterionId);
+    setSelectedId(id);
     setShowModal(true);
   };
 
-  const handleDeleteOption = (optionId) => {
+  const handleDeleteOption = (id) => {
     setDeleteType("option");
-    setSelectedId(optionId);
+    setSelectedId(id);
     setShowModal(true);
   };
 
   const confirmDelete = async () => {
-    try {
-      if (deleteType === "criteria") {
-        await deleteCriterion({ decisionId: id, criterionId: selectedId });
-      }
-
-      if (deleteType === "option") {
-        await deleteOption({ decisionId: id, optionId: selectedId });
-      }
-
-      const data = await loadAll();
-      applyLoadedData(data);
-    } catch {
-      setFeedback("Delete failed.");
-    } finally {
-      setShowModal(false);
-      setSelectedId(null);
-      setDeleteType(null);
+    if (deleteType === "criteria") {
+      await deleteCriterion({ decisionId: id, criterionId: selectedId });
     }
+    if (deleteType === "option") {
+      await deleteOption({ decisionId: id, optionId: selectedId });
+    }
+
+    applyLoadedData(await loadAll());
+    setShowModal(false);
   };
 
   const handleScoreChange = (key, value) => {
-    const parsed = Number(value);
-    if (!value) {
-      setDraftScores((prev) => ({ ...prev, [key]: "" }));
-      return;
-    }
-    if (parsed >= 1 && parsed <= 10) {
-      setDraftScores((prev) => ({ ...prev, [key]: parsed }));
+    const v = Number(value);
+    if (v >= 1 && v <= 10) {
+      setDraftScores((p) => ({ ...p, [key]: v }));
     }
   };
 
   const handleSaveScores = async () => {
     if (totalWeight !== 100) {
-      setFeedback("Total weight must be 100.");
+      setFeedback("Total weight must be 100");
       return;
     }
 
-    const scoreEntries = [];
+    const entries = [];
 
-    for (const option of options) {
-      for (const criterion of criteria) {
-        const key = `${option.id}_${criterion.id}`;
-        const value = Number(draftScores[key]);
-
-        if (!value) {
-          setFeedback("Fill all scores.");
-          return;
-        }
-
-        scoreEntries.push({
-          optionId: option.id,
-          criteriaId: criterion.id,
-          value,
+    for (const o of options) {
+      for (const c of criteria) {
+        const key = `${o.id}_${c.id}`;
+        entries.push({
+          optionId: o.id,
+          criteriaId: c.id,
+          value: draftScores[key],
         });
       }
     }
 
-    try {
-      await saveDecisionScores({ decisionId: id, scoreEntries });
-      const data = await loadAll();
-      applyLoadedData(data);
-      setFeedback("Saved!");
-    } catch {
-      setFeedback("Save failed.");
-    }
+    await saveDecisionScores({ decisionId: id, scoreEntries: entries });
+    applyLoadedData(await loadAll());
+    setFeedback("Saved!");
   };
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-screen bg-slate-100 bg-gradient-to-br from-slate-100 via-indigo-50/40 to-cyan-50/40">
       <Navbar />
 
       <main className="mx-auto max-w-6xl space-y-6 p-6">
-        <section className="bg-white p-6 rounded-xl shadow">
-          <h1 className="text-xl font-bold">{decision?.title || "Decision"}</h1>
-          <p>Total Weight: {totalWeight}/100</p>
+        <section className="animate-fade-up transition hover:shadow-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h1 className="text-2xl font-bold text-slate-900">
+            {decision?.title}
+          </h1>
+
+          <p
+            className={`mt-2 text-sm font-medium ${totalWeight === 100 ? "text-green-600" : "text-red-500"}`}
+          >
+            Total Weight: {totalWeight}/100
+          </p>
         </section>
 
-        <section className="grid md:grid-cols-2 gap-4">
-          <div className="bg-white p-4 rounded-xl">
+        <section className="grid md:grid-cols-2 gap-6">
+          <div className="animate-fade-up transition hover:shadow-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <CriteriaForm onSubmit={handleAddCriteria} />
-            {criteria.map((c) => (
-              <div key={c.id} className="flex justify-between">
-                <span>{c.name}</span>
-                <button onClick={() => handleDeleteCriterion(c.id)}>
-                  Remove
-                </button>
-              </div>
-            ))}
+
+            <div className="mt-4 space-y-2">
+              {criteria.map((c) => (
+                <div
+                  key={c.id}
+                  className="animate-fade-up transition hover:bg-slate-100 flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2"
+                >
+                  <span className="text-sm">
+                    {c.name} ({c.weight}%)
+                  </span>
+
+                  <button
+                    onClick={() => handleDeleteCriterion(c.id)}
+                    className="rounded-md border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-100 transition"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="bg-white p-4 rounded-xl">
+          <div className="animate-fade-up transition hover:shadow-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <OptionForm onSubmit={handleAddOption} />
-            {options.map((o) => (
-              <div key={o.id} className="flex justify-between">
-                <span>{o.name}</span>
-                <button onClick={() => handleDeleteOption(o.id)}>Remove</button>
-              </div>
-            ))}
+
+            <div className="mt-4 space-y-2">
+              {options.map((o) => (
+                <div
+                  key={o.id}
+                  className="animate-fade-up transition hover:bg-slate-100 flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2"
+                >
+                  <span className="text-sm">{o.name}</span>
+
+                  <button
+                    onClick={() => handleDeleteOption(o.id)}
+                    className="rounded-md border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-100 transition"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
-        <section className="bg-white p-6 rounded-xl">
+        <section className="animate-fade-up transition hover:shadow-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <ScoreMatrix
             options={options}
             criteria={criteria}
@@ -280,16 +256,16 @@ export default function DecisionDetails() {
           />
         </section>
 
-        <section className="bg-white p-6 rounded-xl">
+        <section className="animate-fade-up transition hover:shadow-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <ResultsSection
             rankedOptions={rankedOptions}
             hasCompleteSavedScores={hasCompleteSavedScores}
           />
 
           {insights.length > 0 && (
-            <div className="mt-4 bg-green-50 p-3 rounded">
-              <p className="font-semibold">Why this is best:</p>
-              <ul className="list-disc ml-5">
+            <div className="animate-fade-up mt-4 rounded-lg border border-green-200 bg-green-50 p-4 transition hover:shadow-sm">
+              <p className="font-semibold text-green-800">Why this is best:</p>
+              <ul className="mt-2 list-disc ml-5 text-sm text-green-700">
                 {insights.map((i, idx) => (
                   <li key={idx}>{i}</li>
                 ))}
@@ -297,6 +273,8 @@ export default function DecisionDetails() {
             </div>
           )}
         </section>
+
+        {feedback && <p className="text-sm text-green-600">{feedback}</p>}
       </main>
 
       <ConfirmModal
